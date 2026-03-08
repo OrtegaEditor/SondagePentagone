@@ -2180,9 +2180,11 @@
     </footer>
 
     <script>
-        /* ══════════════════════════════════════
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           CONFIG
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ══════════════════════════════════════ */
+        /* ══════════════════════════════════════ CONFIG ══════════════════════════════════════ */
+        const BIN_ID = "69acbae3ae596e708f6ae4dc";
+        const API_KEY = "$2a$10$0lD2NufEWVy.FPr.p1OCXey2e0n8cYrWzQGu.zHfCSBud4EIDtMfe";
+        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
         const PWD = "Asci.2006";
         const KEYS = {
             teachers: "pa_t_v6",
@@ -2872,8 +2874,32 @@
           document.getElementById("votedNotice").classList.remove("show");
         }
       }
+
+      async function fetchData(){
+        const res = await fetch(API_URL,{
+          headers:{
+            "X-Access-Key":API_KEY
+          }
+        });
+      
+        const json = await res.json();
+        return json.record;
+      }
+      
+      async function saveData(data){
+        await fetch(API_URL,{
+          method:"PUT",
+          headers:{
+            "Content-Type":"application/json",
+            "X-Access-Key":API_KEY
+          },
+          body:JSON.stringify(data)
+        });
+      }
       init();
     </script>
 </body>
+
+</html>
 
 </html>
