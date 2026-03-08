@@ -2180,18 +2180,17 @@
     </footer>
 
     <script>
-        /* ══════════════════════════════════════ CONFIG ══════════════════════════════════════ */
         const BIN_ID = "69acbae3ae596e708f6ae4dc";
         const API_KEY = "$2a$10$0lD2NufEWVy.FPr.p1OCXey2e0n8cYrWzQGu.zHfCSBud4EIDtMfe";
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-
         const PWD = "Asci.2006";
+
         const KEYS = {
             teachers: "pa_t_v6",
             votes: "pa_v_v6",
-            uv: "pa_uv_v6",
-            comments: "pa_c_v6"
+            uv: "pa_uv_v6"
         };
+
         const DEFAULTS = [{
             name: "M'PESSE MESSI JACQUES STÉPHANE",
             subject: "ALGORITHMIQUE 1 - ANALYSE 1",
@@ -2214,12 +2213,8 @@
             photo: ""
         }];
 
-        let pendingIdx = null; // enseignant en attente de vote
-        let activeFilter = "all"; // filtre commentaires admin
+        let pendingIdx = null;
 
-        /* ══════════════════════════════════════
-                         STORAGE
-                      ══════════════════════════════════════ */
         const S = {
             get: (k, d) => {
                 try {
@@ -2240,55 +2235,29 @@
                 } catch {}
             }
         };
-        const getTeachers = () =>
-            S.get(
-                KEYS.teachers,
-                DEFAULTS.map((t) => ({...t
-                }))
-            );
+
+        const getTeachers = () => S.get(KEYS.teachers, DEFAULTS.map(t => ({...t
+        })));
         const setTeachers = (arr) => S.set(KEYS.teachers, arr);
-        const getComments = () => S.get(KEYS.comments, []);
-        const setComments = (arr) => S.set(KEYS.comments, arr);
         const getUserVote = () => localStorage.getItem(KEYS.uv);
         const setUserVote = (i) => localStorage.setItem(KEYS.uv, String(i));
 
         async function getVotes() {
-
             const teachers = getTeachers();
             const data = await fetchData();
-
             let votes = data.votes || [];
-
-            while (votes.length < teachers.length) {
-                votes.push(0);
-            }
-
+            while (votes.length < teachers.length) votes.push(0);
             return votes.slice(0, teachers.length);
         }
         const setVotes = (v) => S.set(KEYS.votes, v);
 
-        /* ══════════════════════════════════════
-                         HELPERS
-                      ══════════════════════════════════════ */
         function ini(name) {
-            return (name || "?")
-                .trim()
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((w) => w[0])
-                .join("")
-                .toUpperCase();
+            return (name || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
         }
 
         function avatarHtml(photo, name, wrapCls, initCls) {
             const initEl = `<span class="${initCls}">${ini(name)}</span>`;
-            if (photo)
-                return (
-                    `<div class="${wrapCls}"><img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='${initEl.replace(
-              /'/g,
-              "\\'"
-            )}'">` + "</div>"
-                );
+            if (photo) return `<div class="${wrapCls}"><img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='${initEl.replace(/'/g,"\\'")}'"></div>`;
             return `<div class="${wrapCls}">${initEl}</div>`;
         }
 
@@ -2308,15 +2277,13 @@
             _toastT = setTimeout(() => el.classList.remove("show"), 3200);
         }
 
-        function updateVoteCountDisplay() {
-            const total = getVotes().reduce((a, b) => a + b, 0);
+        async function updateVoteCountDisplay() {
+            const votes = await getVotes();
+            const total = votes.reduce((a, b) => a + b, 0);
             document.getElementById("headVoteCount").textContent = total;
             document.getElementById("footVotes").textContent = total;
         }
 
-        /* ══════════════════════════════════════
-                         RENDER — TEACHER CARDS
-                      ══════════════════════════════════════ */
         function renderTeachers() {
             const teachers = getTeachers();
             const grid = document.getElementById("teacherGrid");
@@ -2324,41 +2291,19 @@
             teachers.forEach((t, i) => {
                 const card = document.createElement("div");
                 card.className = "t-card";
-                if (teachers.length % 2 !== 0 && i === teachers.length - 1)
-                    card.style.gridColumn = "1/-1";
-                card.innerHTML = `
-      <div class="shimmer"></div>
-      ${avatarHtml(t.photo, t.name, "t-avatar", "t-initial")}
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
-        <div class="t-name">${esc(t.name)}</div>
-        <div class="t-subj">${esc(t.subject || "—")}</div>
-        <div class="t-cta">Voter pour cet enseignant</div>
-      </div>`;
+                if (teachers.length % 2 !== 0 && i === teachers.length - 1) card.style.gridColumn = "1/-1";
+                card.innerHTML = `<div class="shimmer"></div>${avatarHtml(t.photo,t.name,"t-avatar","t-initial")}<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div class="t-name">${esc(t.name)}</div><div class="t-subj">${esc(t.subject||"—")}</div><div class="t-cta">Voter pour cet enseignant</div></div>`;
                 card.onclick = () => openVoteModal(i);
                 grid.appendChild(card);
             });
             updateVoteCountDisplay();
         }
 
-        /* ══════════════════════════════════════
-                         VOTE MODAL
-                      ══════════════════════════════════════ */
         function openVoteModal(idx) {
             pendingIdx = idx;
             const t = getTeachers()[idx];
-            document.getElementById("vtBanner").innerHTML = `
-    ${avatarHtml(t.photo, t.name, "mb-avatar", "mb-init")}
-    <div>
-      <div class="mb-name">${esc(t.name)}</div>
-      <div class="mb-subj">${esc(t.subject || "")}</div>
-    </div>`;
-            document.getElementById("vtPseudo").value = "";
-            document.getElementById("vtText").value = "";
-            document.getElementById("charCount").textContent = "0 / 300";
-            document.getElementById("charCount").className = "charrow-count";
-            document.getElementById("vtErr").classList.remove("show");
+            document.getElementById("vtBanner").innerHTML = `${avatarHtml(t.photo,t.name,"mb-avatar","mb-init")}<div><div class="mb-name">${esc(t.name)}</div><div class="mb-subj">${esc(t.subject||"")}</div></div>`;
             document.getElementById("voteOverlay").classList.add("open");
-            setTimeout(() => document.getElementById("vtPseudo").focus(), 160);
         }
 
         function cancelVote() {
@@ -2366,75 +2311,35 @@
             pendingIdx = null;
         }
 
-        function onChar() {
-            const n = document.getElementById("vtText").value.length;
-            const el = document.getElementById("charCount");
-            el.textContent = `${n} / 300`;
-            el.className =
-                "charrow-count" + (n > 270 ? " over" : n > 210 ? " warn" : "");
-        }
-
         async function doVote() {
-            const pseudo = document.getElementById("vtPseudo").value.trim();
-            const comment = document.getElementById("vtText").value.trim();
-            if (!pseudo || pseudo.length < 3) {
-                document.getElementById("vtErr").textContent =
-                    "Le pseudonyme doit contenir au moins 3 caractères.";
-                document.getElementById("vtErr").classList.add("show");
-                return;
-            }
             const teachers = getTeachers();
-
             let data = await fetchData();
             let votes = data.votes || [];
-
             votes[pendingIdx] = (votes[pendingIdx] || 0) + 1;
-
             data.votes = votes;
-
             await saveData(data);
             setUserVote(pendingIdx);
-
-            const comments = getComments();
-            comments.push({
-                pseudo,
-                comment,
-                teacherIdx: pendingIdx,
-                teacherName: teachers[pendingIdx].name,
-                subject: teachers[pendingIdx].subject || "",
-                ts: Date.now()
-            });
-            setComments(comments);
-
             document.getElementById("voteOverlay").classList.remove("open");
             toast("✓ Vote enregistré avec succès !", "ok");
-            showResults(pendingIdx);
+            await showResults(pendingIdx);
             pendingIdx = null;
         }
 
-        /* ══════════════════════════════════════
-                         SHOW RESULTS (user view)
-                      ══════════════════════════════════════ */
-        function showResults(userIdx) {
+        async function showResults(userIdx) {
             document.getElementById("teacherGrid").style.display = "none";
             document.getElementById("resultsList").style.display = "flex";
             document.getElementById("votedNotice").classList.add("show");
-
-            const teachers = getTeachers(),
-                votes = getVotes();
+            const teachers = getTeachers();
+            const votes = await getVotes();
             const total = votes.reduce((a, b) => a + b, 0);
             const maxV = Math.max(...votes);
-            updateVoteCountDisplay();
-
-            const sorted = teachers
-                .map((t, i) => ({...t,
-                    votes: votes[i],
-                    idx: i
-                }))
-                .sort((a, b) => b.votes - a.votes);
+            await updateVoteCountDisplay();
+            const sorted = teachers.map((t, i) => ({...t,
+                votes: votes[i],
+                idx: i
+            })).sort((a, b) => b.votes - a.votes);
             const list = document.getElementById("resultsList");
             list.innerHTML = "";
-
             sorted.forEach(({
                 name,
                 subject,
@@ -2447,45 +2352,17 @@
                 const isUser = idx === parseInt(userIdx);
                 const item = document.createElement("div");
                 item.className = "r-item" + (isWin ? " r-win" : "");
-                item.innerHTML = `
-      ${avatarHtml(
-        photo,
-        name,
-        "r-avatar" + (isWin ? " ra-win" : ""),
-        "r-init"
-      )}
-      <div class="r-body">
-        <div class="r-namerow">
-          <span class="r-name${isWin ? " rn-win" : ""}">${esc(name)}</span>
-          <span class="r-subj">${esc(subject || "")}</span>
-          ${isUser ? '<span class="r-mybadge">✓ Mon vote</span>' : ""}
-        </div>
-        <div class="r-track"><div class="r-bar${
-          isWin ? " rb-win" : ""
-        }" data-pct="${pct}"></div></div>
-      </div>
-      <div class="r-meta">
-        <span class="r-pct${isWin ? " rp-win" : ""}">${pct}%</span>
-        <span class="r-votes">${v} v.</span>
-      </div>`;
+                item.innerHTML = `${avatarHtml(photo,name,"r-avatar"+(isWin?" ra-win":""),"r-init")}<div class="r-body"><div class="r-namerow"><span class="r-name${isWin?" rn-win":""}">${esc(name)}</span><span class="r-subj">${esc(subject||"")}</span>${isUser?'<span class="r-mybadge">✓ Mon vote</span>':""}</div><div class="r-track"><div class="r-bar${isWin?" rb-win":""}" data-pct="${pct}"></div></div></div><div class="r-meta"><span class="r-pct${isWin?" rp-win":""}">${pct}%</span><span class="r-votes">${v} v.</span></div>`;
                 list.appendChild(item);
             });
-            requestAnimationFrame(() =>
-                requestAnimationFrame(() => {
-                    list
-                        .querySelectorAll(".r-bar")
-                        .forEach((b) => (b.style.width = b.dataset.pct + "%"));
-                })
-            );
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                list.querySelectorAll(".r-bar").forEach(b => b.style.width = b.dataset.pct + "%")
+            }));
         }
 
-        /* ══════════════════════════════════════
-                         LOGIN ADMIN
-                      ══════════════════════════════════════ */
         function openLogin() {
             document.getElementById("loginOverlay").classList.add("open");
             document.getElementById("adminPwd").value = "";
-            document.getElementById("lmErr").classList.remove("show");
             setTimeout(() => document.getElementById("adminPwd").focus(), 130);
         }
 
@@ -2507,14 +2384,10 @@
             if (e.key === "Enter") doLogin();
         });
 
-        /* ══════════════════════════════════════
-                         ADMIN VIEW
-                      ══════════════════════════════════════ */
         function enterAdmin() {
             document.getElementById("userView").style.display = "none";
             document.getElementById("adminView").style.display = "block";
             document.getElementById("adminBar").style.display = "flex";
-            activeFilter = "all";
             refreshAdmin();
         }
 
@@ -2527,26 +2400,17 @@
 
         function refreshAdmin() {
             const teachers = getTeachers();
-            const votes = getVotes();
-            const comments = getComments();
+            const votes = await getVotes();
             const total = votes.reduce((a, b) => a + b, 0);
             const maxV = Math.max(...votes, 0);
             const li = votes.indexOf(maxV);
-
-            /* KPI */
             document.getElementById("kVotes").textContent = total;
-            document.getElementById("kComments").textContent = comments.length;
+            document.getElementById("kComments").textContent = 0;
             document.getElementById("kTeachers").textContent = teachers.length;
-            document.getElementById("kLeader").textContent =
-                total > 0 ? teachers[li].name.split(" ")[0] : "—";
-            document.getElementById("cmtBadge").textContent = comments.length;
-
-            /* Classement */
-            const sorted = teachers
-                .map((t, i) => ({...t,
-                    votes: votes[i]
-                }))
-                .sort((a, b) => b.votes - a.votes);
+            document.getElementById("kLeader").textContent = total > 0 ? teachers[li].name.split(" ")[0] : "—";
+            const sorted = teachers.map((t, i) => ({...t,
+                votes: votes[i]
+            })).sort((a, b) => b.votes - a.votes);
             const rk = document.getElementById("adminRanking");
             rk.innerHTML = "";
             sorted.forEach(({
@@ -2556,359 +2420,57 @@
                 votes: v
             }, rank) => {
                 const pct = total > 0 ? Math.round((v / total) * 100) : 0;
-                const rc =
-                    rank === 0 ? "r1" : rank === 1 ? "r2" : rank === 2 ? "r3" : "";
+                const rc = rank === 0 ? "r1" : rank === 1 ? "r2" : rank === 2 ? "r3" : "";
                 const row = document.createElement("div");
                 row.className = "ar-row";
-                row.innerHTML = `
-      <div class="ar-rank ${rc}">${rank + 1}</div>
-      ${avatarHtml(
-        photo,
-        name,
-        "ar-avatar" + (rank === 0 ? " av1" : ""),
-        "ar-init"
-      )}
-      <div class="ar-info">
-        <div class="ar-name">${esc(name)}</div>
-        <div class="ar-subj">${esc(subject || "—")}</div>
-      </div>
-      <div class="ar-bar-wrap">
-        <div class="ar-track"><div class="ar-fill${
-          rank === 0 ? " f1" : ""
-        }" data-pct="${pct}"></div></div>
-      </div>
-      <div class="ar-pct${rank === 0 ? " p1" : ""}">${pct}%</div>
-      <div class="ar-cnt">${v} v.</div>`;
+                row.innerHTML = `<div class="ar-rank ${rc}">${rank+1}</div>${avatarHtml(photo,name,"ar-avatar"+(rank===0?" av1":""),"ar-init")}<div class="ar-info"><div class="ar-name">${esc(name)}</div><div class="ar-subj">${esc(subject||"—")}</div></div><div class="ar-bar-wrap"><div class="ar-track"><div class="ar-fill${rank===0?" f1":""}" data-pct="${pct}"></div></div></div><div class="ar-pct${rank===0?" p1":""}">${pct}%</div><div class="ar-cnt">${v} v.</div>`;
                 rk.appendChild(row);
             });
-            requestAnimationFrame(() =>
-                requestAnimationFrame(() => {
-                    rk.querySelectorAll(".ar-fill").forEach(
-                        (b) => (b.style.width = b.dataset.pct + "%")
-                    );
-                })
-            );
-
-            /* Commentaires */
-            buildComments(teachers, comments);
-
-            /* Éditeur */
-            buildTeacherEditor(teachers);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                rk.querySelectorAll(".ar-fill").forEach(b => b.style.width = b.dataset.pct + "%")
+            }));
         }
 
-        /* ══════════════════════════════════════
-                         COMMENTS (admin only)
-                      ══════════════════════════════════════ */
-        function buildComments(teachers, comments) {
-            /* Filtres */
-
-            const fEl = document.getElementById("cFilters");
-            fEl.innerHTML = "";
-            const addFilter = (label, val, count) => {
-                const btn = document.createElement("button");
-                btn.className = "c-filter" + (activeFilter === val ? " active" : "");
-                btn.textContent = `${label} (${count})`;
-                btn.onclick = () => {
-                    activeFilter = val;
-                    refreshAdmin();
-                };
-                fEl.appendChild(btn);
-            };
-            addFilter("Tous", "all", comments.length);
-            teachers.forEach((t, i) => {
-                addFilter(
-                    t.name.split(" ")[0],
-                    i,
-                    comments.filter((c) => c.teacherIdx === i).length
-                );
-            });
-
-            /* Liste filtrée */
-            const filtered =
-                activeFilter === "all" ?
-                comments :
-                comments.filter((c) => c.teacherIdx === activeFilter);
-
-            const cl = document.getElementById("cList");
-            cl.innerHTML = "";
-            if (!filtered.length) {
-                cl.innerHTML =
-                    '<div class="c-empty">Aucun commentaire pour ce filtre.</div>';
-                return;
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                cancelVote();
+                closeLogin();
             }
-            [...filtered].reverse().forEach((c) => {
-                const realIdx = comments.indexOf(c);
-                const dt = new Date(c.ts).toLocaleString("fr-FR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                });
-                const card = document.createElement("div");
-                card.className = "c-card";
-                card.innerHTML = `
-      <div class="c-card-head">
-        <div class="c-head-left">
-          <span class="c-pseudo">${esc(c.pseudo)}</span>
-          <span class="c-for">→</span>
-          <span class="c-tag">${esc(c.teacherName.split(" ")[0])}</span>
-        </div>
-        <div class="c-head-right">
-          <span class="c-date">${dt}</span>
-          <button class="c-del" onclick="deleteComment(${realIdx})" title="Supprimer">
-            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="c-text">${esc(c.comment)}</div>`;
-                cl.appendChild(card);
+        });
+
+        async function init() {
+            renderTeachers();
+            const uv = getUserVote();
+            if (uv !== null) await showResults(uv);
+            else {
+                document.getElementById("teacherGrid").style.display = "grid";
+                document.getElementById("resultsList").style.display = "none";
+                document.getElementById("votedNotice").classList.remove("show");
+            }
+        }
+
+        async function fetchData() {
+            const res = await fetch(API_URL, {
+                headers: {
+                    "X-Access-Key": API_KEY
+                }
+            });
+            const json = await res.json();
+            return json.record;
+        }
+
+        async function saveData(data) {
+            await fetch(API_URL, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Access-Key": API_KEY
+                },
+                body: JSON.stringify(data)
             });
         }
 
-        function deleteComment(idx) {
-            const c = getComments();
-            c.splice(idx, 1);
-            setComments(c);
-            toast("Commentaire supprimé.", "ok");
-            refreshAdmin();
-        }
-
-        /* ══════════════════════════════════════
-                         TEACHER EDITOR
-                      ══════════════════════════════════════ */
-        function buildTeacherEditor(teachers) {
-            const list = document.getElementById("teList");
-            list.innerHTML = "";
-            teachers.forEach((t, i) => list.appendChild(makeTeRow(t, i, true)));
-        }
-
-        function makeTeRow(t, i, existing) {
-            const row = document.createElement("div");
-            row.className = "te-row";
-            const initH = `<span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:14px;color:#4a9aff">${ini(
-          t.name || "?"
-        )}</span>`;
-            row.innerHTML = `
-    <div class="te-top">
-      <div class="te-photo" onclick="this.nextElementSibling.click()" title="Photo">
-        ${
-          t.photo
-            ? `<img src="${t.photo}" style="width:100%;height:100%;object-fit:cover;">`
-            : initH
-        }
-        <div class="pov"><svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-      </div>
-      <input type="file" class="te-file" accept="image/*" onchange="handlePhoto(this)">
-      <div class="te-fields">
-        <input class="t-inp te-name" type="text" placeholder="Nom complet" value="${esc(
-          t.name || ""
-        )}">
-        <input class="t-inp te-subj" type="text" placeholder="Matière enseignée" value="${esc(
-          t.subject || ""
-        )}">
-      </div>
-      ${
-        existing
-          ? `<button class="te-del" onclick="deleteTeacher(${i})"><svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>`
-          : `<button class="te-del" onclick="this.closest('.te-row').remove()"><svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>`
-      }
-    </div>
-    <input type="hidden" class="te-photo-val" value="${t.photo || ""}">`;
-        return row;
-      }
-      function addTeRow() {
-        const list = document.getElementById("teList");
-        const row = makeTeRow(
-          { name: "", subject: "", photo: "" },
-          list.children.length,
-          false
-        );
-        list.appendChild(row);
-        row.querySelector(".te-name").focus();
-      }
-      function handlePhoto(input) {
-        if (!input.files[0]) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const b64 = e.target.result;
-          const row = input.closest(".te-row");
-          row.querySelector(".te-photo-val").value = b64;
-          const prev = row.querySelector(".te-photo");
-          prev.innerHTML = `<img src="${b64}" style="width:100%;height:100%;object-fit:cover;"><div class="pov"><svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>`;
-        };
-        reader.readAsDataURL(input.files[0]);
-      }
-      function deleteTeacher(idx) {
-        const t = getTeachers(),
-          v = getVotes();
-        if (t.length <= 2) {
-          toast("Minimum 2 enseignants requis.", "err");
-          return;
-        }
-        t.splice(idx, 1);
-        v.splice(idx, 1);
-        setTeachers(t);
-        setVotes(v);
-        toast("Enseignant supprimé.", "ok");
-        refreshAdmin();
-      }
-      function saveTeachers() {
-        const rows = document.querySelectorAll("#teList .te-row");
-        const newT = [];
-        rows.forEach((row) => {
-          const n = row.querySelector(".te-name").value.trim();
-          const s = row.querySelector(".te-subj").value.trim();
-          const p = row.querySelector(".te-photo-val").value;
-          if (n) newT.push({ name: n, subject: s, photo: p });
-        });
-        if (newT.length < 2) {
-          toast("Minimum 2 enseignants requis.", "err");
-          return;
-        }
-        const ov = getVotes();
-        setTeachers(newT);
-        setVotes(newT.map((_, i) => ov[i] ?? 0));
-        const msg = document.getElementById("teMsg");
-        msg.classList.add("show");
-        setTimeout(() => msg.classList.remove("show"), 3000);
-        toast("✓ Enseignants mis à jour !", "ok");
-        refreshAdmin();
-      }
-      function toggleConfirm() {
-        document.getElementById("confirmBox").classList.toggle("show");
-      }
-      function resetAll() {
-        setVotes(getTeachers().map(() => 0));
-        setComments([]);
-        S.del(KEYS.uv);
-        document.getElementById("confirmBox").classList.remove("show");
-        activeFilter = "all";
-        toast("✓ Votes et commentaires réinitialisés.", "ok");
-        refreshAdmin();
-      }
-
-      /* ══════════════════════════════════════
-   EXPORTS
-══════════════════════════════════════ */
-      function exportCSV() {
-        const teachers = getTeachers(),
-          votes = getVotes(),
-          comments = getComments();
-        const total = votes.reduce((a, b) => a + b, 0);
-        const sorted = teachers
-          .map((t, i) => ({ ...t, votes: votes[i] }))
-          .sort((a, b) => b.votes - a.votes);
-        let csv = "Rang,Enseignant,Matière,Votes,Pourcentage\n";
-        sorted.forEach(({ name, subject, votes: v }, rank) => {
-          const pct = total > 0 ? Math.round((v / total) * 100) : 0;
-          csv += `${rank + 1},"${name}","${subject || ""}",${v},${pct}%\n`;
-        });
-        csv += `\nTotal,${total},,,\nDate,"${new Date().toLocaleString(
-          "fr-FR"
-        )}",,,\n`;
-        csv += `\nCommentaires\nPseudo,Enseignant,Matière,Commentaire,Date\n`;
-        comments.forEach((c) => {
-          csv += `"${c.pseudo}","${c.teacherName}","${
-            c.subject || ""
-          }","${c.comment.replace(/"/g, '""')}","${new Date(
-            c.ts
-          ).toLocaleString("fr-FR")}"\n`;
-        });
-        dl("resultats_pentagone.csv", csv, "text/csv;charset=utf-8;");
-        toast("✓ CSV exporté.", "ok");
-      }
-      function exportTXT() {
-        const teachers = getTeachers(),
-          votes = getVotes(),
-          comments = getComments();
-        const total = votes.reduce((a, b) => a + b, 0);
-        const sorted = teachers
-          .map((t, i) => ({ ...t, votes: votes[i] }))
-          .sort((a, b) => b.votes - a.votes);
-        const sep = "═".repeat(56);
-        let txt = `${sep}\n  PENTAGONE ACADEMY — MEILLEUR ENSEIGNANT SEMESTRE 1\n${sep}\n\n`;
-        txt += `  Export : ${new Date().toLocaleString(
-          "fr-FR"
-        )}\n  Votes  : ${total}\n\n${sep}\n  CLASSEMENT\n${sep}\n\n`;
-        sorted.forEach(({ name, subject, votes: v }, rank) => {
-          const pct = total > 0 ? Math.round((v / total) * 100) : 0;
-          const bar =
-            "█".repeat(Math.round(pct / 5)) +
-            "░".repeat(20 - Math.round(pct / 5));
-          txt += `  ${rank + 1}. ${name}\n     ${
-            subject || "—"
-          }\n     ${bar}  ${pct}%  (${v} vote${v !== 1 ? "s" : ""})\n\n`;
-        });
-        txt += `${sep}\n  COMMENTAIRES (${comments.length})\n${sep}\n\n`;
-        if (!comments.length) txt += "  Aucun commentaire.\n\n";
-        else
-          comments.forEach((c) => {
-            txt += `  [${c.pseudo}] → ${c.teacherName.split(" ")[0]} · ${
-              c.subject || ""
-            }\n  "${c.comment}"\n  ${new Date(c.ts).toLocaleString(
-              "fr-FR"
-            )}\n\n`;
-          });
-        txt += `${sep}\n  © Pentagone Academy 2025\n${sep}`;
-        dl("rapport_pentagone.txt", txt, "text/plain;charset=utf-8;");
-        toast("✓ Rapport TXT exporté.", "ok");
-      }
-      function dl(name, content, type) {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob(["\uFEFF" + content], { type }));
-        a.download = name;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      }
-
-      /* ══════════════════════════════════════
-   KEYBOARD
-══════════════════════════════════════ */
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          cancelVote();
-          closeLogin();
-        }
-      });
-
-      /* ══════════════════════════════════════
-   INIT
-══════════════════════════════════════ */
-      function init() {
-        renderTeachers();
-        const uv = getUserVote();
-        if (uv !== null) {
-          showResults(uv);
-        } else {
-          document.getElementById("teacherGrid").style.display = "grid";
-          document.getElementById("resultsList").style.display = "none";
-          document.getElementById("votedNotice").classList.remove("show");
-        }
-      }
-
-      async function fetchData(){
-        const res = await fetch(API_URL,{
-          headers:{
-            "X-Access-Key":API_KEY
-          }
-        });
-      
-        const json = await res.json();
-        return json.record;
-      }
-      
-      async function saveData(data){
-        await fetch(API_URL,{
-          method:"PUT",
-          headers:{
-            "Content-Type":"application/json",
-            "X-Access-Key":API_KEY
-          },
-          body:JSON.stringify(data)
-        });
-      }
-      init();
+        init();
     </script>
 </body>
 
