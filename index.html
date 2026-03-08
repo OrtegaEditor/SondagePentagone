@@ -2398,7 +2398,7 @@
             init();
         }
 
-        function refreshAdmin() {
+        async function refreshAdmin() {
             const teachers = getTeachers();
             const votes = await getVotes();
             const total = votes.reduce((a, b) => a + b, 0);
