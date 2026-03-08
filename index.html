@@ -2252,12 +2252,18 @@
         const getUserVote = () => localStorage.getItem(KEYS.uv);
         const setUserVote = (i) => localStorage.setItem(KEYS.uv, String(i));
 
-        function getVotes() {
-            const t = getTeachers();
-            const v = S.get(KEYS.votes, null);
-            if (!v) return t.map(() => 0);
-            while (v.length < t.length) v.push(0);
-            return v.slice(0, t.length);
+        async function getVotes() {
+
+            const teachers = getTeachers();
+            const data = await fetchData();
+
+            let votes = data.votes || [];
+
+            while (votes.length < teachers.length) {
+                votes.push(0);
+            }
+
+            return votes.slice(0, teachers.length);
         }
         const setVotes = (v) => S.set(KEYS.votes, v);
 
@@ -2368,7 +2374,7 @@
                 "charrow-count" + (n > 270 ? " over" : n > 210 ? " warn" : "");
         }
 
-        function doVote() {
+        async function doVote() {
             const pseudo = document.getElementById("vtPseudo").value.trim();
             const comment = document.getElementById("vtText").value.trim();
             if (!pseudo || pseudo.length < 3) {
@@ -2378,9 +2384,15 @@
                 return;
             }
             const teachers = getTeachers();
-            const votes = getVotes();
-            votes[pendingIdx]++;
-            setVotes(votes);
+
+            let data = await fetchData();
+            let votes = data.votes || [];
+
+            votes[pendingIdx] = (votes[pendingIdx] || 0) + 1;
+
+            data.votes = votes;
+
+            await saveData(data);
             setUserVote(pendingIdx);
 
             const comments = getComments();
@@ -2896,7 +2908,7 @@
           body:JSON.stringify(data)
         });
       }
-      init();
+      init();function getVotes()
     </script>
 </body>
 
